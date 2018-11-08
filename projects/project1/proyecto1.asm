@@ -1,5 +1,14 @@
 .data
-programa: .word 0x80a45000, 0x3464000a, 0x00000000
+
+null: .ascii "\n"
+user: .asciiz "Introduzca el nombre del archivo:\n"
+
+file: .space 12
+buffer: .space 9
+
+.align 2 # En caso de que antes de programa tenga 
+	 # otras reservas de espacio de memoria.
+
 operaciones: .space 1024
 tipos: .space 1024
 
@@ -29,12 +38,113 @@ _beq: .asciiz "beq"
 _halt: .asciiz "halt"
 nextLine: .asciiz "\n"
 
+.align 2 # En caso de que antes de programa tenga 
+	 # otras reservas de espacio de memoria.
+programa: .space 400
 
 .text
+
+	# Prints message to user
+	li $v0, 4 	   # Syscall to read string from user.
+	la $a0, user	   # Addres were string will be loaded.
+	syscall
+
+
+	# Read file name
+	li $v0, 8 	   # Syscall to read string from user.
+	la $a0, file	   # Addres were string will be loaded.
+	li $a1, 19	   # Maximun number of caracters.
+	syscall
+	
+	# Quita caracter nulo al final del nombre de archivo
+	li   $a1, 0
+	lb   $t0, 0($a0)
+	lb   $t1, null
+loop1:	beq  $t0, $t1, cont1
+	lb   $t0, 1($a0)
+	la   $a0, 1($a0)
+	b    loop1
+cont1:	
+	sb   $zero, 0($a0)
+
+	# Abre el archivo
+	li $v0, 13
+	la $a0, file
+	li $a1, 0
+	li $a2, 0
+	syscall
+	move $s6, $v0
+	
+	la   $t6, programa
+	
+loop2: 	beq  $v0, $zero, cont2
+	# Lee linea del archivo
+	li   $v0, 14
+	move $a0, $s6
+	la   $a1, buffer
+	li   $a2, 9
+	syscall
+	
+	# Quita caracter nulo al final de cada linea.
+	sb   $zero, 8($a1)
+	
+	li   $t4, 0
+	
+	# Leo la linea del archivo en buffer.
+	la   $a2, buffer
+	
+loop3:  bge  $t4, 4, cont3
+	
+	sll  $t5, $t5, 8
+	lb   $t0, 0($a2) # Primer caracter
+	lb   $t3, 1($a2) # Segundo caracter
+	
+	# Reviso en que caso estoy (Letra o numero).
+	# Caracter 1
+	bge  $t0, 0x60, let1
+	# Caso Numero
+	andi $t0, 0x0f
+	
+	b num1
+	# Caso Letra
+let1:	addi $t0, $t0, 9
+	andi $t0, $t0, 0x0f
+num1:
+	# Caracter 2
+	bge  $t3, 0x60, let2
+	# Caso Numero
+	andi $t3, 0x0f
+	
+	b num2
+	# Caso Letra
+let2:	addi $t3, $t3, 9
+	andi $t3, $t3, 0x0f
+num2: 
+	# Uno y añado a la palabra
+	sll  $t0, $t0, 4
+	or   $t0, $t0, $t3
+	add  $t5, $t0, $t5
+
+	la   $a2, 2($a2)
+	addi $t4, $t4, 1
+	b    loop3
+cont3: 
+	sw   $t5, 0($t6)
+	la   $t6, 4($t6)
+	
+	b loop2
+cont2:  
+	
+	# Close the file 
+  	li   $v0, 16       # system call for close file
+  	move $a0, $s6      # file descriptor to close
+  	syscall            # close file
+  	
 # Almaceno las operaciones en el puesto correspondiente a su codigo de operacion
 la $t0, operaciones
 
 la $t1, _add
+la $t7, 128($t0)
 sw $t1, 128($t0)
 
 la $t1, _addi
@@ -75,6 +185,9 @@ sw $t1, 24($t0)
 
 la $t1, _halt
 sw $t1, ($t0)
+
+li $v0, 10
+syscall
 
 # Almaceno los tipos de cada operacion 0 para R, 1 para I (sin lw ni sw) y 2 para lw y sw
 la $t0, tipos
@@ -119,7 +232,6 @@ lw $s0, ($s6)
 	
 # Operacion
 li $v0, 34
-
 move $a0, $s0
 syscall
 
@@ -133,8 +245,14 @@ srl $a1, $a1, 24
 add $a2, $a1, $s2
 add $a1, $a1, $s1
 
-lw $a1, ($a1)
-lw $a2, ($a2)
+li $v0, 10
+syscall
+
+lw $a1, 0($a1)
+lw $a2, 0($a2)
+
+li $v0, 10
+syscall
 
 # rt
 	andi $s3, $s0, 0x001f0000
@@ -154,7 +272,7 @@ R:	la $a0, _R
 
 	la $a0, espacio
 	syscall
-	
+
 	move $a0, $a1
 	syscall
 
