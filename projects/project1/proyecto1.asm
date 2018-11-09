@@ -21,6 +21,7 @@ operaciones: .space 1024
 tipos: .space 1024
 
 # Asciiz used for output
+
 error: .asciiz "\n Formato de archivo incorrecto."
 espacio: .asciiz " "
 dolar: .asciiz "$"
