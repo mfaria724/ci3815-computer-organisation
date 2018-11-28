@@ -21,7 +21,7 @@ operaciones: .space 1024
 tipos: .space 1024
 
 # Asciiz used for output
-
+file_not_found: .asciiz "El archivo archivo especificado no existe"
 error: .asciiz "\n Formato de archivo incorrecto."
 espacio: .asciiz " "
 dolar: .asciiz "$"
@@ -102,8 +102,16 @@ cont1:	# Breaks loop
 	syscall
 	
 	move $s6, $v0 # Saves pointer to file.
+	bne $v0, -1, exist
 	
+	li $v0, 4
+	la $a0, file_not_found
+	syscall
 	
+	li $v0, 10
+	syscall
+	
+exist:
 	la   $t6, programa # Loads address to store program.
 loop2: 	beq  $v0, $zero, cont2 # while ($v0 != null)
 	
