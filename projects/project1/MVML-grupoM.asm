@@ -1,4 +1,4 @@
-# Juan Oropeza 15-11041
+yp# Juan Oropeza 15-11041
 # Manuel Oropeza 15-10463
 
 .data
@@ -203,7 +203,7 @@ cont2:
 	la $t1, _halt
 	sw $t1, ($t0)
 
-# Stores types of operation, 0 for R, 1 por I (without lw neither sw), 2 for lw and sw, and -1 for halt
+# Stores types of operation, 0 for R, 1 por I (without sw, bne and beq), 2 for sw, bne and beq, 3 for bne and beq and -1 for halt
 
 	la $t0, tipos		# Load address of the array to store types
 
@@ -221,29 +221,32 @@ cont2:
 	sw $t1, 32($t0)
 	sw $t1, 48($t0)
 	sw $t1, 52($t0)
-	sw $t1, 20($t0)
-	sw $t1, 24($t0)
+	sw $t1, 140($t0)
+
 
 	li $t1, 2		# Load in $t1 2 to store it in the corresponding indexes
 	
-	sw $t1, 140($t0)
 	sw $t1, 172($t0)
-
+	sw $t1, 20($t0)
+	sw $t1, 24($t0)
 
 	li $t1, -1		# Load in $t1 -1 to store it in the corresponding indexes
 	sw $t1, ($t0)
 	
 #############################################################################################################################
 
-	la $s6, programa	# Load the address of array programa to iterate over it
+	
 	la $s1, operaciones	# Load the address of array operaciones to use them
 	la $s2, tipos		# Load the address of array tipos to use them to know what type of operation is each one
-
+	la $s3, programa	# Load the address of array programa to iterate over it
+	la $s6, registros
+	
 # Iteracion
 
-loop:	lw $s0, ($s6)		# Load the current line that is going to be read
+loop:	lw $s0, ($s3)		# Load the current line that is going to be read
 	
 # Operacion
+
 	li $v0, 34		# Syscall to print hexadecimal
 	move $a0, $s0		# Load the line that is going to be read
 	syscall
@@ -255,14 +258,14 @@ loop:	lw $s0, ($s6)		# Load the current line that is going to be read
 	andi $a1, $s0, 0xfc000000	# Turn off the bits that aren't needed to read the operation code
 	srl $a1, $a1, 24		# Shift right of 24 to take the operation code by 4
 
-	add $a2, $a1, $s2		# Add address of tipos array plus the operation code by 4 to have the position of the operation type in the array
-	add $a1, $a1, $s1		# Add address of operaciones array plus the operation code by 4 to have the position of the operation in the array
+	add $s4, $a1, $s2		# Add address of tipos array plus the operation code by 4 to have the position of the operation type in the array
+	add $s5, $a1, $s1		# Add address of operaciones array plus the operation code by 4 to have the position of the operation in the array
 
 
-	lw $a1, 0($a1)		# Load the address of the operation string
-	lw $a2, 0($a2)		# Load the type of the operation
+	lw $s5, 0($s5)		# Load the address of the operation string
+	lw $s4, 0($s4)		# Load the type of the operation
 
-	bnez $a1, salto		# Checks there aren't operations with operation code given
+	bnez $s5, salto		# Checks there aren't operations with operation code given
 	li $v0, 4
 	la $a0, error		# Prints error message
 	syscall
@@ -270,180 +273,226 @@ loop:	lw $s0, ($s6)		# Load the current line that is going to be read
 	li $v0, 10		# Close the program
 	syscall
 	
-salto:
+salto: 	addi $s3, $s3, 4
 
-# rt
-	andi $s3, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
-	srl $s3, $s3, 16		# Shift right of 16 bits to take the rt
-# rs
-	andi $s4, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
-	srl $s4, $s4, 21		# Shift right of 21 bits to take the rs
-# rd
-	andi $s5, $s0, 0x0000f800	# Trun off the bits that aren't needed to read the rd
-	srl $s5, $s5, 11		# Shift right of 11 bits to take the rd
 
-	beq $a2, -1, salir		# Checks if the operation given is halt
-	bnez $a2, I			# Checks if the operation type is I (1)
 
-R:	la $a0, _R			# Prints R
-	syscall
+	beq $s4, -1, salir		# Checks if the operation given is halt
+	bnez $s4, I			# Checks if the operation type is I (1)
 
-	la $a0, espacio			# Prints space
-	syscall
+R:	
 
-	move $a0, $a1			# Prints operation's string
-	syscall
-
-	la $a0, espacio			# Prints space
-	syscall
+#	move $a0, $s5			# Prints operation's string
+#	syscall
+#
+#	
+#	# rd
+#	move $a0, $s5			# Prints rd
+#	li $v0, 1			# Syscall to print a integerdecimal integer
+#	syscall
+#
+#	li $v0, 4			# Syscall to print strings
+#	la $a0, espacio			# Prints space
+#	syscall
+#
+#	la $a0, dolar			# Prints dollar sign
+#	syscall
+#	
+#	# rs
+#	move $a0, $s4			# Prints rs
+#	li $v0, 1
+#	syscall
+#
+#	li $v0, 4
+#	la $a0, espacio			# Prints space
+#	syscall
+#
+#	la $a0, dolar			# Prints dollar sign
+#	syscall
+#	
+#	# rt
+#	move $a0, $s3a			# Prints rt
+#	li $v0, 1
+#	syscall
+#	
+#	li $v0, 4
+#	la $a0, nextLine		# Prints \n to make the next print in the next line
+#	syscall
 	
-	la $a0, dolar			# Prints dollar sign
-	syscall
 	
-	# rd
-	move $a0, $s5			# Prints rd
-	li $v0, 1			# Syscall to print a integerdecimal integer
-	syscall
-
-	li $v0, 4			# Syscall to print strings
-	la $a0, espacio			# Prints space
-	syscall
-
-	la $a0, dolar			# Prints dollar sign
-	syscall
 	
 	# rs
-	move $a0, $s4			# Prints rs
-	li $v0, 1
-	syscall
-
-	li $v0, 4
-	la $a0, espacio			# Prints space
-	syscall
-
-	la $a0, dolar			# Prints dollar sign
-	syscall
+	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
+	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
+	lw $a0, registros($s7) 
+	
 	
 	# rt
-	move $a0, $s3			# Prints rt
-	li $v0, 1
-	syscall
+	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $7, 14			# Shift right of 16 bits to take the 
+	lw $a1, registros($s7)
 	
-	li $v0, 4
-	la $a0, nextLine		# Prints \n to make the next print in the next line
-	syscall
-		
-	addi $s6, $s6, 4		# Adds 4 to the address of programa array to continue iterating
+	
+	# rd
+	andi $s7, $s0, 0x0000f800	# Trun off the bits that aren't needed to read the rd
+	srl $s7, $s7, 9			# Shift right of 11 bits to take the
+	
+	jalr $s5
+	
+	sw $v0, registros($s7)
+	
 
 	b loop				# Start the next iteration
 
 
-I:	la $a0, _I			# Prints I
-	syscall
+I:
+#	la $a0, _I			# Prints I
+#	syscall
 
-	la $a0, espacio			# Prints space
-	syscall
+#	la $a0, espacio			# Prints space
+#	syscall
 	
-	beq $a2, 2, lw_sw		# Checks if the operation is lw or sw, (type 2)
-
-	move $a0, $a1			# Prints operation's string
-	syscall
-
-	la $a0, espacio			# Prints space
-	syscall
+#	beq $a2, 2, sw_bne_beq		# Checks if the operation is sw, bne or beq (type 2)
 	
-	la $a0, dolar			# Prints dollar sign
-	syscall
+#	bne $a1, 32 
 
-	# rt
-	move $a0, $s3			# Prints rt
-	li $v0, 1
-	syscall
-
-	li $v0, 4
-	la $a0, espacio			# Prints space
-	syscall
-
-	la $a0, dolar			# Prints dollar sign
-	syscall
-
+#	move $a0, $s5			# Prints operation's string
+#	syscall
+#
+#	la $a0, espacio			# Prints space
+#	syscall
+#	
+#	syscall
+#	# rt
+#	move $a0, $s3a			# Prints rt
+#	li $v0, 1
+#	syscall
+#
+#	li $v0, 4
+#	la $a0, espacio			# Prints space
+#	syscall
+#
+#	la $a0, dolar			# Prints dollar sign
+#	syscall
+#
+#	# rs
+#	move $a0, $s4			# Prints rs
+#	li $v0, 1
+#	syscall
+#
+#	li $v0, 4
+#	la $a0, espacio			# Prints space
+#	syscall
+#	
+#	# Offset
+#	andi $a0, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
+#	li $v0, 1			# Prints the offset
+#	syscall
+#
+#	li $v0, 4
+#	la $a0, nextLine		# Prints \n to make the next print in the next line
+#	syscall
+	
+	
+		
 	# rs
-	move $a0, $s4			# Prints rs
-	li $v0, 1
-	syscall
-
-	li $v0, 4
-	la $a0, espacio			# Prints space
-	syscall
+	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
+	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
+	lw $a0, registros($s7) 
 	
 	# Offset
-	andi $a0, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
-	li $v0, 1			# Prints the offset
-	syscall
+	andi $a1, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
 
-	li $v0, 4
-	la $a0, nextLine		# Prints \n to make the next print in the next line
-	syscall
+	# rt
+	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $7, 14			# Shift right of 16 bits to take the 
 	
-	addi $s6, $s6, 4		# Adds 4 to the address of programa array to continue iterating
+	jalr $s5
+	
+	sw $v0, registros($s7)
+	
+	
+	b loop				# Starts the new iteration
+
+sw_bne_beq:	
+
+#	move $a0, $a1			# Prints operation's string
+#	syscall
+
+#	la $a0, espacio			# Prints space
+#	syscall
+	
+#	la $a0, dolar			# Prints dolar sign
+#	syscall
+	
+	# rt
+#	move $a0, $s3a			# Prints rt
+#	li $v0, 1
+#	syscall
+	
+#	la $a0, espacio			# Prints space
+#	li $v0, 4
+#	syscall
+	
+	# Offset
+#	andi $a0, $s0, 0x0000ffff	# Turn off the bits that aren't needed to read the offset
+#	li $v0, 1			# Prints the offset
+#	syscall
+	
+#	la $a0, parentesis1		# Prints (
+#	li $v0, 4
+#	syscall
+	
+#	la $a0, dolar			# Prints dollar sign
+#	syscall
+	
+	# rs
+#	move $a0, $s4			# Prints rs
+#	li $v0, 1
+#	syscall
+	
+#	la $a0, parentesis2		# Prints )
+#	li $v0, 4
+#	syscall
+#	
+#	la $a0, nextLine
+#	syscall
+	
+	
+	
+	
+	
+	
+	
+	# rs
+	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
+	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
+	lw $a0, registros($s7) 
+	
+		
+	# rt
+	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $7, 14			# Shift right of 16 bits to take the 
+	lw $a1, registros($s7)
+	
+	# Offset
+	andi $a2, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
+	
+	
+	jalr $s5
+	
 
 	b loop				# Starts the new iteration
 
-lw_sw:	move $a0, $a1			# Prints operation's string
-	syscall
+	
+salir:	#la $a0, _R			# Prints R
+	#syscall
 
-	la $a0, espacio			# Prints space
-	syscall
+	#la $a0, espacio			# Prints Space
+	#syscall
 	
-	la $a0, dolar			# Prints dolar sign
-	syscall
-	
-	# rt
-	move $a0, $s3			# Prints rt
-	li $v0, 1
-	syscall
-	
-	la $a0, espacio			# Prints space
-	li $v0, 4
-	syscall
-	
-	# Offset
-	andi $a0, $s0, 0x0000ffff	# Turn off the bits that aren't needed to read the offset
-	li $v0, 1			# Prints the offset
-	syscall
-	
-	la $a0, parentesis1		# Prints (
-	li $v0, 4
-	syscall
-	
-	la $a0, dolar			# Prints dollar sign
-	syscall
-	
-	# rs
-	move $a0, $s4			# Prints rs
-	li $v0, 1
-	syscall
-	
-	la $a0, parentesis2		# Prints )
-	li $v0, 4
-	syscall
-	
-	la $a0, nextLine
-	syscall
-
-	addi $s6, $s6, 4		# Adds 4 to the address of programa array to continue iterating
-
-	b loop				# Starts the new iteration
-
-	
-salir:	la $a0, _R			# Prints R
-	syscall
-
-	la $a0, espacio			# Prints Space
-	syscall
-	
-	move $a0, $a1			# Prints operation string, in this case halt
-	syscall
+	#move $a0, $a1s5			# Prints operation string, in this case halt
+	#syscall
 	
 	li $v0, 10			# Exits the program
 	syscall
