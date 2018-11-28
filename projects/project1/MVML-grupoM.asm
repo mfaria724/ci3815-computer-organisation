@@ -1,3 +1,6 @@
+# Juan Oropeza 15-11041
+# Manuel Oropeza 15-10463
+
 .data
 
 ################# File reader ###############
