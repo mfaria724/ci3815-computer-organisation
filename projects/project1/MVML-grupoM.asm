@@ -1,5 +1,5 @@
 # Juan Oropeza 15-11041
-# Manuel Oropeza 15-10463
+# Manuel Faria 15-10463
 
 .data
 
@@ -15,6 +15,8 @@ buffer: .space 9
 .align 2 # Align to words.
 # Program translated.
 programa: .space 400
+registros: .space 128
+memoria: .space 2000
 
 ################# Translator ###############
 
@@ -443,7 +445,75 @@ lw_sw:	move $a0, $a1			# Prints operation's string
 
 	b loop				# Starts the new iteration
 
+# Funciones
+
+#########################
+# Suma dos numeros almacenados en registros
+_add:   add $v0, $a0, $a1
+	jr $ra
+
+#########################	
+# Suma un numero almacenado en un refgistro con una valor inmediato
+_addi:  srl $t0, $a1, 15
+	beq $t0, 0, cont
+	or $a1, $a1, 0xffff0000
+cont:	
+	add $v0, $a0, $a1
+	jr $ra
+
+#########################
+# Operacion lógica "&&" entre dos registros
+_and:   and $v0, $a0, $a1
+	jr $ra
 	
+#########################
+# Operacion lógica "&&" entre un registro y un valor inmediato
+_andi:  and $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Multiplica dos números guardados en registros
+_mult:	mult $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Operación lógica "\\" entre dos registros.
+_or: 	or $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Operación lógica "\\" entre un registro y un valor inmediato
+_ori:	or $v0, $a0, $a1
+	jr $ra
+
+#########################
+# Shift a la izquierda de la cantidad de bts especificada en $a1
+_sllv:	sllv $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Realiza la resta de dos números almacenados en registros. 
+_sub:	sub $v0, $a0, $a1
+	jr $ra
+	
+#########################
+_lw:
+	jr $ra
+
+#########################
+_sw:
+	jr $ra
+
+#########################
+_bne:
+	jr $ra
+
+#########################
+_beq:
+	jr $ra
+
+#########################
+
 salir:	la $a0, _R			# Prints R
 	syscall
 
