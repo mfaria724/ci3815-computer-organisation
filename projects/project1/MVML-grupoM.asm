@@ -1,5 +1,5 @@
-yp# Juan Oropeza 15-11041
-# Manuel Oropeza 15-10463
+# Juan Oropeza 15-11041
+# Manuel Faria 15-10463
 
 .data
 
@@ -15,6 +15,8 @@ buffer: .space 9
 .align 2 # Align to words.
 # Program translated.
 programa: .space 400
+registros: .space 128
+memoria: .space 2000
 
 ################# Translator ###############
 
@@ -24,32 +26,14 @@ operaciones: .space 1024
 tipos: .space 1024
 
 # Asciiz used for output
-
+file_not_found: .asciiz "El archivo archivo especificado no existe"
 error: .asciiz "\n Formato de archivo incorrecto."
 espacio: .asciiz " "
 dolar: .asciiz "$"
 parentesis1: .asciiz "("
 parentesis2: .asciiz ")"
-_R: .asciiz "R"
-_I: .asciiz "I"
 
-_add: .asciiz "add"
-_addi: .asciiz "addi"
-_and: .asciiz "and"
-_andi: .asciiz "andi"
-_mult: .asciiz "mult"
-_or: .asciiz "or"
-_ori: .asciiz "ori"
-_sllv: .asciiz "sllv"
-_sub: .asciiz "sub"
 
-_lw: .asciiz "lw"
-_sw: .asciiz "sw"
-
-_bne: .asciiz "bne"
-_beq: .asciiz "beq"
-
-_halt: .asciiz "halt"
 nextLine: .asciiz "\n"
 
 ################# Resgistries Planification ###############
@@ -105,8 +89,16 @@ cont1:	# Breaks loop
 	syscall
 	
 	move $s6, $v0 # Saves pointer to file.
+	bne $v0, -1, exist
 	
+	li $v0, 4
+	la $a0, file_not_found
+	syscall
 	
+	li $v0, 10
+	syscall
+	
+exist:
 	la   $t6, programa # Loads address to store program.
 loop2: 	beq  $v0, $zero, cont2 # while ($v0 != null)
 	
@@ -247,13 +239,13 @@ loop:	lw $s0, ($s3)		# Load the current line that is going to be read
 	
 # Operacion
 
-	li $v0, 34		# Syscall to print hexadecimal
-	move $a0, $s0		# Load the line that is going to be read
-	syscall
+#	li $v0, 34		# Syscall to print hexadecimal
+#	move $a0, $s0		# Load the line that is going to be read
+#	syscall
 
-	li $v0, 4		# Syscall to print string
-	la $a0, espacio		# Load space string
-	syscall
+#	li $v0, 4		# Syscall to print string
+#	la $a0, espacio		# Load space string
+#	syscall
 
 	andi $a1, $s0, 0xfc000000	# Turn off the bits that aren't needed to read the operation code
 	srl $a1, $a1, 24		# Shift right of 24 to take the operation code by 4
@@ -277,7 +269,7 @@ salto: 	addi $s3, $s3, 4
 
 
 
-	beq $s4, -1, salir		# Checks if the operation given is halt
+	beq $s4, -1, _halt		# Checks if the operation given is halt
 	bnez $s4, I			# Checks if the operation type is I (1)
 
 R:	
@@ -328,8 +320,8 @@ R:
 	
 	
 	# rt
-	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
-	srl $s7, $7, 14			# Shift right of 16 bits to take the 
+	andi $s7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $s7, 14		# Shift right of 16 bits to take the 
 	lw $a1, registros($s7)
 	
 	
@@ -352,7 +344,7 @@ I:
 #	la $a0, espacio			# Prints space
 #	syscall
 	
-#	beq $a2, 2, sw_bne_beq		# Checks if the operation is sw, bne or beq (type 2)
+	beq $s4, 2, sw_bne_beq		# Checks if the operation is sw, bne or beq (type 2)
 	
 #	bne $a1, 32 
 
@@ -404,8 +396,8 @@ I:
 	andi $a1, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
 
 	# rt
-	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
-	srl $s7, $7, 14			# Shift right of 16 bits to take the 
+	andi $s7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $s7, 14			# Shift right of 16 bits to take the 
 	
 	jalr $s5
 	
@@ -471,8 +463,8 @@ sw_bne_beq:
 	
 		
 	# rt
-	andi $7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
-	srl $s7, $7, 14			# Shift right of 16 bits to take the 
+	andi $s7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
+	srl $s7, $s7, 14			# Shift right of 16 bits to take the 
 	lw $a1, registros($s7)
 	
 	# Offset
@@ -484,8 +476,100 @@ sw_bne_beq:
 
 	b loop				# Starts the new iteration
 
+# Funciones
+
+#########################
+# Suma dos numeros almacenados en registros
+_add:   add $v0, $a0, $a1
+	jr $ra
+
+#########################	
+# Suma un numero almacenado en un refgistro con una valor inmediato
+_addi:  srl $t0, $a1, 15
+	beq $t0, 0, cont
+	ori $a1, $a1, 0xffff0000
+cont:	
+	add $v0, $a0, $a1
+	jr $ra
+
+#########################
+# Operacion lógica "&&" entre dos registros
+_and:   and $v0, $a0, $a1
+	jr $ra
 	
-salir:	#la $a0, _R			# Prints R
+#########################
+# Operacion lógica "&&" entre un registro y un valor inmediato
+_andi:  and $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Multiplica dos números guardados en registros
+_mult:	mul $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Operación lógica "\\" entre dos registros.
+_or: 	or $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Operación lógica "\\" entre un registro y un valor inmediato
+_ori:	or $v0, $a0, $a1
+	jr $ra
+
+#########################
+# Shift a la izquierda de la cantidad de bts especificada en $a1
+_sllv:	sllv $v0, $a0, $a1
+	jr $ra
+	
+#########################
+# Realiza la resta de dos números almacenados en registros. 
+_sub:	sub $v0, $a0, $a1
+	jr $ra
+	
+#########################
+_lw:	srl $t0, $a1, 15
+	beq $t0, 0, cont4
+	ori $a1, $a1, 0xffff0000
+cont4:	
+	add $a0, $a0, $a1
+	lw $v0, memoria($a0)
+	jr $ra
+
+#########################
+_sw:	srl $t0, $a2, 15
+	beq $t0, 0, cont5
+	ori $a2, $a2, 0xffff0000
+cont5:	
+	add $a0,$a0,$a2
+	sw $a1, memoria($a0)
+	jr $ra
+
+#########################
+_bne:	srl $t0, $a2, 15
+	beq $t0, 0, cont6
+	ori $a2, $a2, 0xffff0000
+cont6:	
+	sll $a2, $a2, 2
+	beq $a0, $a1, cont7
+	add $s3, $s3, $a2
+cont7:
+	jr $ra
+
+#########################
+_beq:	srl $t0, $a2, 15
+	beq $t0, 0, cont8
+	ori $a2, $a2, 0xffff0000
+cont8:	
+	sll $a2, $a2, 2	
+	bne $a0, $a1, cont9
+	add $s3, $s3, $a2
+cont9:
+	jr $ra
+
+#########################
+
+_halt:	#la $a0, _R			# Prints R
 	#syscall
 
 	#la $a0, espacio			# Prints Space
