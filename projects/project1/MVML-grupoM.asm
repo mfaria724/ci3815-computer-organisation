@@ -16,6 +16,7 @@ buffer: .space 9
 # Program translated.
 programa: .space 400
 registros: .space 128
+regpc: .space 4
 memoria: .space 2000
 
 ################# Translator ###############
@@ -28,14 +29,10 @@ tipos: .space 1024
 # Asciiz used for output
 file_not_found: .asciiz "El archivo archivo especificado no existe"
 error: .asciiz "\n Formato de archivo incorrecto."
-espacio: .asciiz " "
-dolar: .asciiz "$"
-parentesis1: .asciiz "("
-parentesis2: .asciiz ")"
-
-
 nextLine: .asciiz "\n"
-
+registro: .asciiz "registro $"
+espacio: .asciiz ": "
+pc: .asciiz "pc: "
 ################# Resgistries Planification ###############
 # $v0 --> Syscall codes
 # $a0 --> Load addresses, registers and offset
@@ -239,14 +236,6 @@ loop:	lw $s0, ($s3)		# Load the current line that is going to be read
 	
 # Operacion
 
-#	li $v0, 34		# Syscall to print hexadecimal
-#	move $a0, $s0		# Load the line that is going to be read
-#	syscall
-
-#	li $v0, 4		# Syscall to print string
-#	la $a0, espacio		# Load space string
-#	syscall
-
 	andi $a1, $s0, 0xfc000000	# Turn off the bits that aren't needed to read the operation code
 	srl $a1, $a1, 24		# Shift right of 24 to take the operation code by 4
 
@@ -273,46 +262,7 @@ salto: 	addi $s3, $s3, 4
 	bnez $s4, I			# Checks if the operation type is I (1)
 
 R:	
-
-#	move $a0, $s5			# Prints operation's string
-#	syscall
-#
-#	
-#	# rd
-#	move $a0, $s5			# Prints rd
-#	li $v0, 1			# Syscall to print a integerdecimal integer
-#	syscall
-#
-#	li $v0, 4			# Syscall to print strings
-#	la $a0, espacio			# Prints space
-#	syscall
-#
-#	la $a0, dolar			# Prints dollar sign
-#	syscall
-#	
-#	# rs
-#	move $a0, $s4			# Prints rs
-#	li $v0, 1
-#	syscall
-#
-#	li $v0, 4
-#	la $a0, espacio			# Prints space
-#	syscall
-#
-#	la $a0, dolar			# Prints dollar sign
-#	syscall
-#	
-#	# rt
-#	move $a0, $s3a			# Prints rt
-#	li $v0, 1
-#	syscall
-#	
-#	li $v0, 4
-#	la $a0, nextLine		# Prints \n to make the next print in the next line
-#	syscall
-	
-	
-	
+		
 	# rs
 	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
 	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
@@ -338,55 +288,9 @@ R:
 
 
 I:
-#	la $a0, _I			# Prints I
-#	syscall
-
-#	la $a0, espacio			# Prints space
-#	syscall
 	
 	beq $s4, 2, sw_bne_beq		# Checks if the operation is sw, bne or beq (type 2)
 	
-#	bne $a1, 32 
-
-#	move $a0, $s5			# Prints operation's string
-#	syscall
-#
-#	la $a0, espacio			# Prints space
-#	syscall
-#	
-#	syscall
-#	# rt
-#	move $a0, $s3a			# Prints rt
-#	li $v0, 1
-#	syscall
-#
-#	li $v0, 4
-#	la $a0, espacio			# Prints space
-#	syscall
-#
-#	la $a0, dolar			# Prints dollar sign
-#	syscall
-#
-#	# rs
-#	move $a0, $s4			# Prints rs
-#	li $v0, 1
-#	syscall
-#
-#	li $v0, 4
-#	la $a0, espacio			# Prints space
-#	syscall
-#	
-#	# Offset
-#	andi $a0, $s0, 0x0000ffff	# Turn off bits that aren't needed to read the offset
-#	li $v0, 1			# Prints the offset
-#	syscall
-#
-#	li $v0, 4
-#	la $a0, nextLine		# Prints \n to make the next print in the next line
-#	syscall
-	
-	
-		
 	# rs
 	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
 	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
@@ -407,55 +311,6 @@ I:
 	b loop				# Starts the new iteration
 
 sw_bne_beq:	
-
-#	move $a0, $a1			# Prints operation's string
-#	syscall
-
-#	la $a0, espacio			# Prints space
-#	syscall
-	
-#	la $a0, dolar			# Prints dolar sign
-#	syscall
-	
-	# rt
-#	move $a0, $s3a			# Prints rt
-#	li $v0, 1
-#	syscall
-	
-#	la $a0, espacio			# Prints space
-#	li $v0, 4
-#	syscall
-	
-	# Offset
-#	andi $a0, $s0, 0x0000ffff	# Turn off the bits that aren't needed to read the offset
-#	li $v0, 1			# Prints the offset
-#	syscall
-	
-#	la $a0, parentesis1		# Prints (
-#	li $v0, 4
-#	syscall
-	
-#	la $a0, dolar			# Prints dollar sign
-#	syscall
-	
-	# rs
-#	move $a0, $s4			# Prints rs
-#	li $v0, 1
-#	syscall
-	
-#	la $a0, parentesis2		# Prints )
-#	li $v0, 4
-#	syscall
-#	
-#	la $a0, nextLine
-#	syscall
-	
-	
-	
-	
-	
-	
-	
 	# rs
 	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
 	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
@@ -569,14 +424,53 @@ cont9:
 
 #########################
 
-_halt:	#la $a0, _R			# Prints R
-	#syscall
+_halt:
+	li $s0, 0
 
-	#la $a0, espacio			# Prints Space
-	#syscall
+looph:
+	li $v0, 4
+
+	la $a0, registro
+	syscall
 	
-	#move $a0, $a1s5			# Prints operation string, in this case halt
-	#syscall
+	li $v0, 1
 	
+	move $a0, $s0
+	syscall
+	
+	li $v0, 4
+	la $a0, espacio
+	syscall 
+	
+	li $v0, 1
+	
+	sll $s1, $s0, 2 
+	lw $a0, registros($s1)
+	syscall
+	
+	li $v0, 4
+	
+	la $a0, nextLine
+	syscall
+
+	addi $s0, $s0, 1
+	bne $s0, 32, looph
+		
+	la $a0, pc
+	syscall
+
+	la $s4, programa
+	sub $s3, $s3, $s4
+		
+
+	move $a0, $s3
+	
+	srl $a0, $a0, 2
+	
+	sw $a0, regpc
+	
+	li $v0, 1
+	syscall
+
 	li $v0, 10			# Exits the program
 	syscall
