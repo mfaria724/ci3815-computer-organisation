@@ -42,10 +42,11 @@ pc: .asciiz "pc: "
 # $s0 --> Load the current line of the program
 # $s1 --> Load the address of the operations array
 # $s2 --> Load the address of the operation types array
-# $s3 --> Load the value of rt
-# $s4 --> Load the value of rs
-# $s5 --> Load the value of rd
+# $s3 --> Load the address of array programa to iterate over it
+# $s4 --> Load the type of the current operation
+# $s5 --> Load the current operation
 # $s6 --> Temporal file descriptor saver, Load address of programa array to iterate over it
+# $s7
 # $t6 --> Program pointer
 # $t4 --> Iterator
 
