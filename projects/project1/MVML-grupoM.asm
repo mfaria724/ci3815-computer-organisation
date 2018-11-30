@@ -33,6 +33,9 @@ nextLine: .asciiz "\n"
 registro: .asciiz "registro $"
 espacio: .asciiz ": "
 pc: .asciiz "pc: "
+mult_4: .asciiz "La dirección especificada en un branch no está alineada con una palabra."
+num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la memoria: "
+
 ################# Resgistries Planification ###############
 # $v0 --> Syscall codes
 # $a0 --> Load addresses, registers and offset
@@ -388,15 +391,44 @@ _lw:	srl $t0, $a1, 15
 	ori $a1, $a1, 0xffff0000
 cont4:	
 	add $a0, $a0, $a1
+
+	addi $t1, $t1, 4
+	div $a0, $t1
+	mfhi $t1
+	bnez $t1, cont10
+	
+	li $v0, 4
+	la $a0, mult_4
+	syscall
+	
+	li $v0, 10
+	syscall
+
+cont10:
 	lw $v0, memoria($a0)
 	jr $ra
 
 #########################
-_sw:	srl $t0, $a2, 15
+_sw:	
+	srl $t0, $a2, 15
 	beq $t0, 0, cont5
 	ori $a2, $a2, 0xffff0000
+
 cont5:	
 	add $a0,$a0,$a2
+	addi $t1, $t1, 4
+	div $a0, $t1
+	mfhi $t1
+	bnez $t1, cont11
+	
+	li $v0, 4
+	la $a0, mult_4
+	syscall
+	
+	li $v0, 10
+	syscall
+
+cont11:	
 	sw $a1, memoria($a0)
 	jr $ra
 
@@ -470,6 +502,13 @@ looph:
 	sw $a0, regpc
 	
 	li $v0, 1
+	syscall
+	
+	li $v0, 4
+	la $a0, num_palabras
+	syscall
+	
+	li $v0, 5
 	syscall
 
 	li $v0, 10			# Exits the program
