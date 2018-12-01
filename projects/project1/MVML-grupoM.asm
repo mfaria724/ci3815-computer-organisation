@@ -389,182 +389,181 @@ _sub:	sub $v0, $a0, $a1
 	jr $ra
 	
 #########################
-_lw:	srl $t0, $a1, 15
+# Carga una palabra en la memoria
+_lw:	srl $t0, $a1, 15 # Extesión de signo para el offset.
 	beq $t0, 0, cont4
 	ori $a1, $a1, 0xffff0000
 cont4:	
-	add $a0, $a0, $a1
+	add $a0, $a0, $a1 # Sumo dirección mas su desplazamiento.
 
-	addi $t1, $t1, 4
-	div $a0, $t1
+	addi $t1, $t1, 4 # Verifico que la dirección esté alineada con una palabra.
+	div $a0, $t1     # para que pueda ser leida de memoria.
 	mfhi $t1
 	bnez $t1, cont10
-	
-	li $v0, 4
+			 # Si no está alineada
+	li $v0, 4	 # Muestra mensaje de error al usuario.
 	la $a0, mult_4
 	syscall
 	
-	li $v0, 10
+	li $v0, 10	 # Termina el programa 
 	syscall
 
 cont10:
-	lw $v0, memoria($a0)
+	lw $v0, memoria($a0) # Guarda la palabra en el registro especificado.
 	jr $ra
 
 #########################
+# Guarda una palabra en la memoria
 _sw:	
-	srl $t0, $a2, 15
+	srl $t0, $a2, 15 # Extesión de signo para el offset.
 	beq $t0, 0, cont5
 	ori $a2, $a2, 0xffff0000
 
 cont5:	
-	add $a0,$a0,$a2
-	addi $t1, $t1, 4
-	div $a0, $t1
+	add $a0,$a0,$a2 # Sumo dirección mas su desplazamiento.
+	
+	addi $t1, $t1, 4 # Verifico que la dirección esté alineada con una palabra.
+	div $a0, $t1     # para que pueda ser guardada en memoria.
 	mfhi $t1
 	bnez $t1, cont11
-	
-	li $v0, 4
+	                 # Si no está alineada
+	li $v0, 4	 # Muestra mensaje de error al usuario.
 	la $a0, mult_4
 	syscall
 	
-	li $v0, 10
+	li $v0, 10       # Termina el programa
 	syscall
 
 cont11:	
-	sw $a1, memoria($a0)
+	sw $a1, memoria($a0) # Guarda la palabra en el espacio reservado para la memoria.
 	jr $ra
 
 #########################
-_bne:	srl $t0, $a2, 15
+# Modifica el $PC (<-- De nuestro MVML) si dos registros son iguales
+_bne:	srl $t0, $a2, 15 # Extension de signo del offset
 	beq $t0, 0, cont6
 	ori $a2, $a2, 0xffff0000
 cont6:	
-	sll $a2, $a2, 2
-	beq $a0, $a1, cont7
-	add $s3, $s3, $a2
+	sll $a2, $a2, 2 
+	beq $a0, $a1, cont7 # Verifica igualdad
+	add $s3, $s3, $a2 # Modifica el $PC (<-- De nuestro MVML)
 cont7:
 	jr $ra
 
 #########################
-_beq:	srl $t0, $a2, 15
+# Modifica el $PC (<-- De nuestro MVML) si dos registros son iguales
+_beq:	srl $t0, $a2, 15 # Extension de signo del offset
 	beq $t0, 0, cont8
 	ori $a2, $a2, 0xffff0000
 cont8:	
 	sll $a2, $a2, 2	
-	bne $a0, $a1, cont9
-	add $s3, $s3, $a2
+	bne $a0, $a1, cont9 # Verifica desigualdad
+	add $s3, $s3, $a2 # Modifica el $PC (<-- De nuestro MVML)
 cont9:
 	jr $ra
 
 #########################
-
+# Termina la ejecución del programa.
 _halt:
-	li $s0, 0
+	li $s0, 0   		# Inicializacion del iterador
 
-looph:
+looph:				# Loop para imprimir los registros
 	li $v0, 4
 
-	la $a0, registro
+	la $a0, registro        # Mensaje de registro
 	syscall
 	
 	li $v0, 1
 	
-	move $a0, $s0
+	move $a0, $s0		# Numero del registro
 	syscall
 	
-	li $v0, 4
+	li $v0, 4		# Espacio
 	la $a0, espacio
 	syscall 
 	
 	li $v0, 1
 	
-	sll $s1, $s0, 2 
-	lw $a0, registros($s1)
+	sll $s1, $s0, 2 	# Calcula la posicion de la palabra que contiene 
+	lw $a0, registros($s1)  # el registro en el arreglo de registros.
 	syscall
 	
-	li $v0, 4
-	
+	li $v0, 4		# Separador
 	la $a0, coma
 	syscall
 	
-	li $v0, 34
+	li $v0, 34		# Imprime valor en Hexadecimal
 	lw $a0, registros($s1)
 	syscall
 	
-	li $v0, 4
-	
+	li $v0, 4		# Caracter de nueva linea
 	la $a0, nextLine
 	syscall
 
-	addi $s0, $s0, 1
-	bne $s0, 32, looph
+	addi $s0, $s0, 1	# Incrementa iterador
+	bne $s0, 32, looph	# Chequea si existen mas registros
 		
-	la $a0, pc
+	la $a0, pc		# String identificador del $PC
 	syscall
 
-	la $s4, programa
-	sub $s3, $s3, $s4
+	la $s4, programa	
+	sub $s3, $s3, $s4	# Direccion a la que apunta el $PC
 		
-
-	move $a0, $s3
+	move $a0, $s3		
 	
 	srl $a0, $a0, 2
 	
-	sw $a0, regpc
+	sw $a0, regpc		# Guardo registro $PC en la memoria
 	
-	li $v0, 1
+	li $v0, 1		# Imprimo el valor que se almaceno en memoria
 	syscall
 	
 	li $v0, 4
-	la $a0, num_palabras
+	la $a0, num_palabras 	# Mensaje para preguntar al usuario el numero
+	syscall			# de palabras de memoria que desea imprimir.
+	
+	li $v0, 5		# Lee el número de palabras.
 	syscall
 	
-	li $v0, 5
-	syscall
-	
-	
-	li $s0, 0
-	move $s1, $v0
+	li $s0, 0		# Inicializo iterador
+	move $s1, $v0		# Guardo el número de palabras deseadas
 	
 memloop:
-	li $v0, 4
-	la $a0, palabra
+	li $v0, 4 		
+	la $a0, palabra 	# String para identificar la palabra
 	syscall
 	
-	li $v0, 1
+	li $v0, 1		# Número de la palabras
 	move $a0, $s0
 	syscall
 	
-	li $v0, 4
+	li $v0, 4		# Separador
 	la $a0, espacio
 	syscall
 	
-	li $v0, 1
+	li $v0, 1		# Contenido de la palabra
 	sll $t1, $s0, 2
 	lw $a0, memoria($t1)
 	syscall
 	
-	li $v0, 4
+	li $v0, 4		# Separador
 	la $a0, coma
 	syscall
 	
-	li $v0, 34
+	li $v0, 34		# Contenido de la palabra en Hexadecimal
 	lw $a0, memoria($t1)
 	syscall
 	
-	li $v0, 4
+	li $v0, 4		# Caracter de nueva linea
 	la $a0 nextLine
 	syscall
 	
-	
-	addi $s0, $s0, 1
-				
-	bne $s0, $s1, memloop
+	addi $s0, $s0, 1	# Incrementa iterador			
+	bne $s0, $s1, memloop	# Verifica que se deseen mas palabras.
 	
 	
 	
 	
 
-	li $v0, 10			# Exits the program
+	li $v0, 10		# Exits the program
 	syscall
