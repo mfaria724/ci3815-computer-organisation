@@ -31,7 +31,9 @@ file_not_found: .asciiz "El archivo archivo especificado no existe"
 error: .asciiz "\n Formato de archivo incorrecto."
 nextLine: .asciiz "\n"
 registro: .asciiz "registro $"
+palabra: .asciiz "palabra "
 espacio: .asciiz ": "
+coma: .asciiz ", "
 pc: .asciiz "pc: "
 mult_4: .asciiz "La dirección especificada en un branch no está alineada con una palabra."
 num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la memoria: "
@@ -42,14 +44,14 @@ num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la
 # $a1 --> Syscalls parameters, iterator, buffer address, and address to operation string
 # $t0 --> Load bytes, and addresses of operations and types arrays
 # $a2 --> Syscall parameters, buffer address, and type of operation
-# $s0 --> Load the current line of the program
-# $s1 --> Load the address of the operations array
-# $s2 --> Load the address of the operation types array
-# $s3 --> Load the address of array programa to iterate over it
-# $s4 --> Load the type of the current operation
-# $s5 --> Load the current operation
-# $s6 --> Temporal file descriptor saver, Load address of programa array to iterate over it
-# $s7
+# $s0 --> Used to load the current line of the program
+# $s1 --> Used to load the address of the operations array
+# $s2 --> Used to load the address of the operation types array
+# $s3 --> Used to load the address of array programa to iterate over it
+# $s4 --> Used to load the type of the current operation
+# $s5 --> Used to load the current operation
+# $s6 --> Temporal file descriptor saver and used to load address of registers array
+# $s7 --> Used to take rs, rt, rd or Offset of the current operation and pass it to $a0
 # $t6 --> Program pointer
 # $t4 --> Iterator
 
@@ -232,7 +234,7 @@ cont2:
 	la $s1, operaciones	# Load the address of array operaciones to use them
 	la $s2, tipos		# Load the address of array tipos to use them to know what type of operation is each one
 	la $s3, programa	# Load the address of array programa to iterate over it
-	la $s6, registros
+	la $s6, registros	# Load the address of the array that contains the register
 	
 # Iteracion
 
@@ -483,6 +485,15 @@ looph:
 	
 	li $v0, 4
 	
+	la $a0, coma
+	syscall
+	
+	li $v0, 34
+	lw $a0, registros($s1)
+	syscall
+	
+	li $v0, 4
+	
 	la $a0, nextLine
 	syscall
 
@@ -511,6 +522,49 @@ looph:
 	
 	li $v0, 5
 	syscall
+	
+	
+	li $s0, 0
+	move $s1, $v0
+	
+memloop:
+	li $v0, 4
+	la $a0, palabra
+	syscall
+	
+	li $v0, 1
+	move $a0, $s0
+	syscall
+	
+	li $v0, 4
+	la $a0, espacio
+	syscall
+	
+	li $v0, 1
+	sll $t1, $s0, 2
+	lw $a0, memoria($t1)
+	syscall
+	
+	li $v0, 4
+	la $a0, coma
+	syscall
+	
+	li $v0, 34
+	lw $a0, memoria($t1)
+	syscall
+	
+	li $v0, 4
+	la $a0 nextLine
+	syscall
+	
+	
+	addi $s0, $s0, 1
+				
+	bne $s0, $s1, memloop
+	
+	
+	
+	
 
 	li $v0, 10			# Exits the program
 	syscall
