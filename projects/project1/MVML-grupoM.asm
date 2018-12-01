@@ -34,6 +34,7 @@ registro: .asciiz "registro $"
 palabra: .asciiz "palabra "
 espacio: .asciiz ": "
 coma: .asciiz ", "
+errorbranch: .asciiz "Branch fuera de rango"
 pc: .asciiz "pc: "
 mult_4: .asciiz "La dirección especificada en memoria no está alineada con una palabra."
 num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la memoria: "
@@ -44,8 +45,8 @@ num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la
 # $a1 --> Syscalls parameters, iterator, buffer address, and address to operation string
 # $t0 --> Load bytes, and addresses of operations and types arrays
 # $a2 --> Syscall parameters, buffer address, and type of operation
-# $s0 --> Used to load the current line of the program
-# $s1 --> Used to load the address of the operations array
+# $s0 --> Used to load the current line of the program, also it's used as iterator for the ouput
+# $s1 --> Used to load the address of the operations array, also it's used as the number of memory words to print
 # $s2 --> Used to load the address of the operation types array
 # $s3 --> Used to load the address of array programa to iterate over it
 # $s4 --> Used to load the type of the current operation
@@ -54,7 +55,6 @@ num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la
 # $s7 --> Used to take rs, rt, rd or Offset of the current operation and pass it to $a0
 # $t6 --> Program pointer
 # $t4 --> Iterator
-
 .text
 
 ################# File reader ###############
@@ -446,8 +446,22 @@ cont6:
 	sll $a2, $a2, 2 
 	beq $a0, $a1, cont7 # Verifica igualdad
 	add $s3, $s3, $a2 # Modifica el $PC (<-- De nuestro MVML)
+	
+	la $t0, programa	# Verifica si el nuevo pc se encuentra
+	blt $s3, $t0, errorb	# en el rango del programa,
+	addi $t0, $t0, 400	# sino, el programa termina
+	bgt $s3, $t0, errorb
 cont7:
 	jr $ra
+
+errorb: 
+	li $v0, 4
+	la $a0, errorbranch
+	syscall
+	
+	li $v0, 10
+	syscall
+	
 
 #########################
 # Modifica el $PC (<-- De nuestro MVML) si dos registros son iguales
@@ -458,6 +472,11 @@ cont8:
 	sll $a2, $a2, 2	
 	bne $a0, $a1, cont9 # Verifica desigualdad
 	add $s3, $s3, $a2 # Modifica el $PC (<-- De nuestro MVML)
+	
+	la $t0, programa	# Verifica si el nuevo pc se encuentra
+	blt $s3, $t0, errorb	# en el rango del programa,
+	addi $t0, $t0, 400	# sino, el programa termina
+	bgt $s3, $t0, errorb
 cont9:
 	jr $ra
 
