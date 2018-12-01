@@ -35,7 +35,7 @@ palabra: .asciiz "palabra "
 espacio: .asciiz ": "
 coma: .asciiz ", "
 pc: .asciiz "pc: "
-mult_4: .asciiz "La dirección especificada en un branch no está alineada con una palabra."
+mult_4: .asciiz "La dirección especificada en memoria no está alineada con una palabra."
 num_palabras: .asciiz "\nIndique el número de palabras que desea imprimir de la memoria: "
 
 ################# Resgistries Planification ###############
@@ -239,17 +239,19 @@ cont2:
 # Iteracion
 
 loop:	lw $s0, ($s3)		# Load the current line that is going to be read
+
+	addi $s3, $s3, 4	# Augments the pc by 1 word
 	
 # Operacion
 
 	andi $a1, $s0, 0xfc000000	# Turn off the bits that aren't needed to read the operation code
 	srl $a1, $a1, 24		# Shift right of 24 to take the operation code by 4
 
-	add $s4, $a1, $s2		# Add address of tipos array plus the operation code by 4 to have the position of the operation type in the array
+	add $s4, $a1, $s2		# Add address of types array plus the operation code by 4 to have the position of the operation type in the array
 	add $s5, $a1, $s1		# Add address of operaciones array plus the operation code by 4 to have the position of the operation in the array
 
 
-	lw $s5, 0($s5)		# Load the address of the operation string
+	lw $s5, 0($s5)		# Load the address of the operation function
 	lw $s4, 0($s4)		# Load the type of the operation
 
 	bnez $s5, salto		# Checks there aren't operations with operation code given
@@ -260,34 +262,32 @@ loop:	lw $s0, ($s3)		# Load the current line that is going to be read
 	li $v0, 10		# Close the program
 	syscall
 	
-salto: 	addi $s3, $s3, 4
-
-
+salto: 	
 
 	beq $s4, -1, _halt		# Checks if the operation given is halt
-	bnez $s4, I			# Checks if the operation type is I (1)
+	bnez $s4, I			# Checks if the operation type is different to R
 
 R:	
 		
 	# rs
 	andi $s7, $s0, 0x03e00000	# Trun off the bits that aren't needed to read the rs
-	srl $s7, $s7, 19		# Shift right of 21 bits to take the rs
+	srl $s7, $s7, 19		# Shift right of 19 bits to take the rs by 4
 	lw $a0, registros($s7) 
 	
 	
 	# rt
 	andi $s7, $s0, 0x001f0000	# Trun off the bits that aren't needed to read the rt
-	srl $s7, $s7, 14		# Shift right of 16 bits to take the 
+	srl $s7, $s7, 14		# Shift right of 14 bits to take the rt by 4
 	lw $a1, registros($s7)
 	
 	
 	# rd
-	andi $s7, $s0, 0x0000f800	# Trun off the bits that aren't needed to read the rd
-	srl $s7, $s7, 9			# Shift right of 11 bits to take the
+	andi $s7, $s0, 0x0000f800	# Turn off the bits that aren't needed to read the rd
+	srl $s7, $s7, 9			# Shift right of 9 bits to take the rd by 4
 	
-	jalr $s5
+	jalr $s5			# Jal to the operation function
 	
-	sw $v0, registros($s7)
+	sw $v0, registros($s7)		# Saves the result in the destination reg
 	
 
 	b loop				# Start the next iteration
@@ -396,12 +396,12 @@ _lw:	srl $t0, $a1, 15 # Extesión de signo para el offset.
 cont4:	
 	add $a0, $a0, $a1 # Sumo dirección mas su desplazamiento.
 
-	addi $t1, $t1, 4 # Verifico que la dirección esté alineada con una palabra.
-	div $a0, $t1     # para que pueda ser leida de memoria.
+	li $t1, 4       # Verifico que la dirección esté alineada con una palabra.
+	div $a0, $t1    # para que pueda ser leida de memoria.
 	mfhi $t1
-	bnez $t1, cont10
-			 # Si no está alineada
-	li $v0, 4	 # Muestra mensaje de error al usuario.
+	beqz $t1, cont10
+                  # Si no está alineada
+	li $v0, 4       # Muestra mensaje de error al usuario.
 	la $a0, mult_4
 	syscall
 	
@@ -421,13 +421,12 @@ _sw:
 
 cont5:	
 	add $a0,$a0,$a2 # Sumo dirección mas su desplazamiento.
-	
-	addi $t1, $t1, 4 # Verifico que la dirección esté alineada con una palabra.
-	div $a0, $t1     # para que pueda ser guardada en memoria.
+	li $t1, 4       # Verifico que la dirección esté alineada con una palabra.
+	div $a0, $t1    # para que pueda ser guardada en memoria.
 	mfhi $t1
-	bnez $t1, cont11
-	                 # Si no está alineada
-	li $v0, 4	 # Muestra mensaje de error al usuario.
+	beqz $t1, cont11
+                  # Si no está alineada
+	li $v0, 4       # Muestra mensaje de error al usuario.
 	la $a0, mult_4
 	syscall
 	
@@ -506,21 +505,24 @@ looph:				# Loop para imprimir los registros
 	la $a0, pc		# String identificador del $PC
 	syscall
 
-	la $s4, programa	
-	sub $s3, $s3, $s4	# Direccion a la que apunta el $PC
-		
-	move $a0, $s3		
+	move $a0, $s3
+	sw $a0, regpc  # Guardo registro $PC en la memoria
 	
-	srl $a0, $a0, 2
 	
-	sw $a0, regpc		# Guardo registro $PC en la memoria
-	
-	li $v0, 1		# Imprimo el valor que se almaceno en memoria
+	li $v0, 1      # Imprimo el valor que se almaceno en memoria
 	syscall
 	
 	li $v0, 4
-	la $a0, num_palabras 	# Mensaje para preguntar al usuario el numero
-	syscall			# de palabras de memoria que desea imprimir.
+	la $a0, coma
+	syscall
+	
+	move $a0, $s3
+	li $v0, 34
+	syscall
+	
+	li $v0, 4
+	la $a0, num_palabras # Mensaje para preguntar al usuario el numero
+	syscall              # de palabras de memoria que desea imprimir.
 	
 	li $v0, 5		# Lee el número de palabras.
 	syscall
@@ -560,10 +562,6 @@ memloop:
 	
 	addi $s0, $s0, 1	# Incrementa iterador			
 	bne $s0, $s1, memloop	# Verifica que se deseen mas palabras.
-	
-	
-	
-	
 
 	li $v0, 10		# Exits the program
 	syscall
